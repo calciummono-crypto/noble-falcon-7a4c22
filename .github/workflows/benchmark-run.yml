@@ -1,0 +1,28 @@
+name: benchmark-run
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Launch bot
+        env:
+          CI: "true"
+        run: |
+          timeout 180s node --no-deprecation autosecure.js
