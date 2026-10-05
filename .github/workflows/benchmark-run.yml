@@ -27,8 +27,49 @@ jobs:
       - name: Verify native SQLite binding
         run: node -e "const sqlite3=require('sqlite3'); console.log('sqlite3 native binding loaded:', !!sqlite3.Database)"
 
-      - name: Launch bot
-        env:
-          CI: "true"
+      - name: Start monitoring dashboard
         run: |
-          timeout 180s node --no-deprecation autosecure.js
+          nohup node dashboard/server.js > dashboard.log 2>&1 &
+          sleep 2
+          cat dashboard.log
+
+      - name: Launch application
+        run: |
+          nohup timeout 180s node --no-deprecation autosecure.js > bot.log 2>&1 &
+          echo $! > bot.pid
+
+      - name: Create temporary Cloudflare preview
+        run: |
+          curl -L --fail --silent --show-error             https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64             -o cloudflared
+          chmod +x cloudflared
+          ./cloudflared --no-autoupdate tunnel --url http://127.0.0.1:3000 > cloudflare.log 2>&1 &
+          for i in $(seq 1 30); do
+            URL=$(grep -Eo 'https://[-a-z0-9]+\.trycloudflare\.com' cloudflare.log | head -n 1 || true)
+            if [ -n "$URL" ]; then
+              echo "============================================================"
+              echo "DASHBOARD PREVIEW: $URL"
+              echo "============================================================"
+              break
+            fi
+            sleep 1
+          done
+          tail -n 20 cloudflare.log
+
+      - name: Keep preview alive
+        run: |
+          for i in $(seq 1 150); do
+            if ! kill -0 $(cat bot.pid) 2>/dev/null; then
+              echo "Application process exited; showing final log:"
+              tail -n 80 bot.log || true
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Print application log
+        if: always()
+        run: tail -n 120 bot.log || true
+
+      - name: Print dashboard log
+        if: always()
+        run: cat dashboard.log || true
