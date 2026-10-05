@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <title>AutoSecure — Control Center</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <div>
+          <strong>AutoSecure</strong>
+          <span>Control Center</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item active" href="#overview"><span class="icon">⌂</span>Overview</a>
+        <a class="nav-item" href="#services"><span class="icon">◈</span>Services</a>
+        <a class="nav-item" href="#runtime"><span class="icon">◷</span>Runtime</a>
+        <a class="nav-item" href="#activity"><span class="icon">≋</span>Activity</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="connection">
+          <span class="status-dot"></span>
+          <span>Dashboard online</span>
+        </div>
+        <small>Read-only monitoring</small>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Operations</p>
+          <h1>Overview</h1>
+          <p class="subtitle">A live snapshot of the service runtime.</p>
+        </div>
+        <button id="refresh" class="button secondary"><span>↻</span> Refresh</button>
+      </header>
+
+      <section id="overview" class="hero">
+        <div class="hero-copy">
+          <div class="pill"><span class="status-dot"></span> System healthy</div>
+          <h2>Your stack, at a glance.</h2>
+          <p>The dashboard refreshes automatically and keeps sensitive application data out of the public preview.</p>
+        </div>
+        <div class="hero-art">
+          <div class="orb orb-a"></div>
+          <div class="orb orb-b"></div>
+          <div class="grid-lines"></div>
+        </div>
+      </section>
+
+      <section class="stats-grid">
+        <article class="stat-card">
+          <div class="stat-label">Uptime</div>
+          <div id="uptime" class="stat-value">—</div>
+          <div class="stat-meta">Current process runtime</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">Registered users</div>
+          <div id="users" class="stat-value">—</div>
+          <div class="stat-meta">Aggregate database count</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">Bot records</div>
+          <div id="bots" class="stat-value">—</div>
+          <div class="stat-meta">Stored configuration records</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-label">Node</div>
+          <div id="node" class="stat-value compact">—</div>
+          <div class="stat-meta">Runtime version</div>
+        </article>
+      </section>
+
+      <section id="services" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Services</p>
+            <h3>Health</h3>
+          </div>
+          <span id="updated" class="muted">Updating…</span>
+        </div>
+        <div class="service-grid">
+          <article class="service-card">
+            <div class="service-icon">◎</div>
+            <div class="service-copy"><strong>Dashboard</strong><span>Web interface</span></div>
+            <span id="dashboard-status" class="service-status online">Online</span>
+          </article>
+          <article class="service-card">
+            <div class="service-icon">◌</div>
+            <div class="service-copy"><strong>API</strong><span>Application endpoint</span></div>
+            <span id="api-status" class="service-status online">Online</span>
+          </article>
+          <article class="service-card">
+            <div class="service-icon">▣</div>
+            <div class="service-copy"><strong>SQLite</strong><span>Local database</span></div>
+            <span id="db-status" class="service-status online">Connected</span>
+          </article>
+        </div>
+      </section>
+
+      <section id="runtime" class="section split">
+        <div class="panel">
+          <div class="section-heading"><div><p class="eyebrow">Runtime</p><h3>Environment</h3></div></div>
+          <div class="detail-list">
+            <div><span>Platform</span><strong id="platform">—</strong></div>
+            <div><span>Process ID</span><strong id="pid">—</strong></div>
+            <div><span>Environment</span><strong id="environment">—</strong></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="section-heading"><div><p class="eyebrow">Database</p><h3>Counts</h3></div></div>
+          <div class="detail-list">
+            <div><span>Users</span><strong id="users-detail">—</strong></div>
+            <div><span>Slots</span><strong id="slots">—</strong></div>
+            <div><span>License records</span><strong id="licenses">—</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="activity" class="section">
+        <div class="panel activity-panel">
+          <div class="section-heading"><div><p class="eyebrow">Activity</p><h3>Live status feed</h3></div><span class="live-badge">LIVE</span></div>
+          <div id="feed" class="feed">
+            <div class="feed-item"><span class="status-dot"></span><div><strong>Dashboard initialized</strong><small>Waiting for first metrics snapshot</small></div></div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">AutoSecure Control Center · monitoring interface</footer>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
