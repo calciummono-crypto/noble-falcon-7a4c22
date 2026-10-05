@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: benchmark-run
+  cancel-in-progress: true
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -30,7 +34,13 @@ jobs:
       - name: Start monitoring dashboard
         run: |
           nohup node dashboard/server.js > dashboard.log 2>&1 &
+          DASHBOARD_PID=$!
           sleep 2
+          echo "Dashboard PID: $DASHBOARD_PID"
+          curl --fail --silent --show-error http://127.0.0.1:3000/ | head -c 120
+          echo
+          curl --fail --silent --show-error http://127.0.0.1:3000/api/metrics
+          echo
           cat dashboard.log
 
       - name: Launch application
