@@ -1,12 +1,15 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const net = require('net');
 const sqlite3 = require('sqlite3').verbose();
 
 const ROOT = path.join(__dirname, 'public');
 const PORT = Number(process.env.DASHBOARD_PORT || 3000);
 const startedAt = Date.now();
 const dbPath = path.join(__dirname, '..', 'db', 'database.db');
+const appPidPath = path.join(__dirname, '..', 'bot.pid');
+const smtpPort = Number(process.env.SMTP_PORT || 25);
 
 const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
   if (err) console.error('[DASHBOARD] Database unavailable:', err.message);
@@ -28,13 +31,70 @@ async function countTable(name) {
   }
 }
 
+function pidState(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return { state: 'not detected', pid: null };
+  try {
+    process.kill(pid, 0);
+    return { state: 'running', pid };
+  } catch {
+    return { state: 'stopped', pid };
+  }
+}
+
+function readApplicationState() {
+  try {
+    const raw = fs.readFileSync(appPidPath, 'utf8').trim();
+    return pidState(Number(raw));
+  } catch {
+    return { state: 'not detected', pid: null };
+  }
+}
+
+function tcpHealth(port, host = '127.0.0.1', timeoutMs = 900) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let settled = false;
+    const done = (state) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(state);
+    };
+
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => done('reachable'));
+    socket.once('timeout', () => done('unreachable'));
+    socket.once('error', () => done('unreachable'));
+    socket.connect(port, host);
+  });
+}
+
 async function metrics() {
-  const [users, slots, licenses, bots] = await Promise.all([
+  const [users, slots, licenses, bots, emails] = await Promise.all([
     countTable('users'),
     countTable('slots'),
     countTable('usedLicenses'),
     countTable('autosecure'),
+    countTable('emails'),
   ]);
+
+  const application = readApplicationState();
+  const smtp = { port: smtpPort, state: await tcpHealth(smtpPort) };
+
+  const events = [
+    {
+      title: application.state === 'running' ? 'Application process detected' : 'Application process not detected',
+      detail: application.pid ? `PID ${application.pid}` : 'No managed process ID is available.'
+    },
+    {
+      title: smtp.state === 'reachable' ? 'Mail transport reachable' : 'Mail transport not reachable',
+      detail: `SMTP health check on port ${smtp.port}`
+    },
+    {
+      title: 'Database counters refreshed',
+      detail: 'Only aggregate counts are exposed by the dashboard.'
+    }
+  ];
 
   return {
     ok: true,
@@ -42,6 +102,8 @@ async function metrics() {
       dashboard: 'online',
       api: 'online',
       database: db.open ? 'connected' : 'unknown',
+      application: application.state,
+      smtp: smtp.state,
       environment: process.env.GITHUB_ACTIONS === 'true' ? 'GitHub Actions' : 'server'
     },
     runtime: {
@@ -50,12 +112,16 @@ async function metrics() {
       platform: process.platform,
       pid: process.pid
     },
+    application,
+    smtp,
     database: {
       users,
       slots,
       licenses,
-      botRecords: bots
+      botRecords: bots,
+      mailRecords: emails
     },
+    activity: events,
     generatedAt: new Date().toISOString()
   };
 }
@@ -70,7 +136,9 @@ const MIME = {
 
 const server = http.createServer(async (req, res) => {
   try {
-    if (req.url === '/api/metrics') {
+    const requestPath = new URL(req.url, 'http://127.0.0.1').pathname;
+
+    if (requestPath === '/api/metrics' || requestPath === '/api/health') {
       const data = await metrics();
       res.writeHead(200, {
         'Content-Type': MIME['.json'],
@@ -80,7 +148,6 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify(data));
     }
 
-    const requestPath = new URL(req.url, 'http://127.0.0.1').pathname;
     const relative = requestPath === '/' ? 'index.html' : requestPath.replace(/^\/+/, '');
     const filePath = path.resolve(ROOT, relative);
 
